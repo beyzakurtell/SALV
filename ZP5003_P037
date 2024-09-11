@@ -1,0 +1,169 @@
+*&---------------------------------------------------------------------*
+*& Report  ZP5003_P037
+*&
+*&---------------------------------------------------------------------*
+*&
+*&
+*&---------------------------------------------------------------------*
+
+REPORT  ZP5003_P037.
+
+*DATA: gt_sbook TYPE TABLE OF SBOOK,
+*      go_salv TYPE REF TO cl_salv_table.
+*
+*
+*START-OF-SELECTION.
+*
+*select *  up to 20 rows from sbook
+*  into table gt_sbook.
+*
+*cl_salv_table=>FACTORY(
+*  importing
+*    R_SALV_TABLE   =  go_salv   " Basis Class Simple ALV Tables
+**    burada oluşturmuş olduğum SALV objesini buraya yazıcam
+*  changing
+*    T_TABLE        = gt_sbook
+**    internal table buraya yazılıcak
+*).
+**  catch CX_SALV_MSG.    " ALV: General Error Class with Message
+*
+*
+** salv yi ekrana bu fonksiyon ile basarız.
+*go_salv->DISPLAY( ).
+
+
+
+
+DATA: gt_sbook TYPE TABLE OF SBOOK,
+      go_salv TYPE REF TO cl_salv_table.
+
+
+START-OF-SELECTION.
+
+  select *  up to 20 rows from sbook
+    into table gt_sbook.
+
+  cl_salv_table=>FACTORY(
+    importing
+      R_SALV_TABLE   =  go_salv   " Basis Class Simple ALV Tables
+*    burada oluşturmuş olduğum SALV objesini buraya yazıcam
+    changing
+      T_TABLE        = gt_sbook
+*    internal table buraya yazılıcak
+  ).
+*  catch CX_SALV_MSG.    " ALV: General Error Class with Message
+
+
+
+* display ile ilgili bir özelliği değiştirmek istiyorum.
+  DATA: lo_display TYPE REF TO CL_SALV_DISPLAY_SETTINGS.
+
+  LO_DISPLAY = go_salv->GET_DISPLAY_SETTINGS( ).
+
+* title ı değiştirmek için kullanılır.
+  lo_display->SET_LIST_HEADER( value = 'SALV Eğitim Videosu' ).
+
+* satırlara zebra görüntüsü vermek için kullanılır.
+  lo_display->SET_STRIPED_PATTERN( value = 'X' ).
+
+* GET ler objenin bir datasını çekmek için kullanacağım metotlar
+* SET  bir özelliğini değiştireceksem kullanacağım metotlar.
+* is ile başlayanlar bu özellik var ya da yok şeklinde dönen yapılar.
+
+* KOLONUN GENİŞLİĞİNİ OPTİMİZE ETME
+* burada artık display değil de kolon ile ilgili bir obje olşturmalıyım
+
+  DATA: lo_cols TYPE REF TO CL_SALV_COLUMNS.
+
+  lo_cols = go_salv->GET_COLUMNS( ).
+* AMOUNT alanını altındaki eleman uzunluğu kadar kısabildiği kadar kıstı.
+  lo_cols->SET_OPTIMIZE( value = 'X' ).
+
+* KOLON İSİMLERİNİ KOD TARAFINDA DEĞİŞTİRMEK İÇİN
+* öncelikle
+* yukarıda genel kolon özellikleri objesini kullanmıştım
+* tek kolonla işlem yapmak istediğim için tek kolon için bir obje oluşturmalıyım
+
+  DATA: lo_col TYPE REF TO CL_SALV_COLUMN.
+  lo_col = lo_cols->GET_COLUMN( COLUMNNAME = 'INVOICE' ).
+  lo_col->SET_LONG_TEXT( 'Yeni Fatura Düzenleyicisi' ).
+  lo_col->SET_MEDIUM_TEXT( 'Yeni Fatura D.' ).
+  lo_col->SET_SHORT_TEXT('Yeni Fat').
+
+
+* ÜSTBİRİM kolonu gözükmesin, onu kaldırmak istiyorsam:
+  TRY.
+      lo_col = lo_cols->GET_COLUMN( COLUMNNAME = 'MANDT' ).
+      lo_col->SET_VISIBLE( IF_SALV_C_BOOL_SAP=>FALSE ).
+    CATCH CX_SALV_NOT_FOUND.
+
+  ENDTRY.
+
+* TRY ın içerisindeki tüm kod bloklarına bakıyor
+* anlık olarak hata alırsa CATCH in altında kod bloğu varsa
+* oraya zıplıyor. yani dump ekranını vermiyor.
+
+
+
+
+
+* Yukarıda bir toolbar butonu ekleyip. Bunun üzeride oynama yapbiliriz.
+
+
+  DATA: lo_func TYPE REF TO cl_salv_functions.
+
+  lo_func = go_salv->GET_FUNCTIONS( ).
+  lo_func->SET_ALL( IF_SALV_C_BOOL_SAP=>TRUE ).
+
+
+* alv nin üst kısmına header kısmı ekleme
+
+  DATA: lo_header TYPE REF TO cl_salv_form_layout_grid,
+        lo_h_label TYPE REF TO cl_salv_form_label,
+        lo_h_flow TYPE REF TO cl_salv_form_layout_flow.
+
+  CREATE OBJECT lo_header.
+
+  lo_h_label = lo_header->CREATE_LABEL(
+      ROW         = 1
+      COLUMN      = 1
+  ).
+
+
+  lo_h_label->SET_TEXT( value = 'Başlık İlk Satır').
+
+
+  lo_h_flow = lo_header->CREATE_FLOW(
+      ROW     = 2
+      COLUMN  = 1
+  ).
+
+  lo_h_flow->CREATE_TEXT(
+    exporting
+      TEXT     = 'Başlık İkinci Satır'
+  ).
+
+  go_salv->SET_TOP_OF_LIST( value = lo_header ).
+
+
+
+
+*bunu pop up ekranı olarak vermek istersem
+
+
+go_salv->SET_SCREEN_POPUP(
+  exporting
+    START_COLUMN = 10
+    END_COLUMN   = 75
+    START_LINE   = 5
+    END_LINE     = 25
+).
+
+
+
+
+
+
+
+* salv yi ekrana bu fonksiyon ile basarız.
+  go_salv->DISPLAY( ).
